@@ -12,17 +12,3 @@
  /*
   * Connection Management Procedures (IEC 61883-1) helper functions
   *
-@@ -51,7 +59,12 @@
- 	struct fw_device *device = fw_parent_device(c->resources.unit);
- 	int generation = c->resources.generation;
- 	int rcode, errors = 0;
--	__be32 old_arg, buffer[2];
-+	__be32 old_arg;
-+#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)
-+	__be32 buffer[2];
-+#else
-+	__be32 *buffer = c->resources.buffer;
-+#endif
- 	int err;
- 
- 	buffer[0] = c->last_pcr_value;
