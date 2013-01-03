@@ -1699,6 +1699,7 @@ static int __devinit digi_probe(struct device *unit_dev)
 	if (vendor != OUI_MAUDIO)
 		digi->rx_stream.flags |= CIP_HI_DUALWIRE;
 #endif
+	digi->rx_stream.use_digimagic=true;
 
 	card->private_free = digi_card_free;
 

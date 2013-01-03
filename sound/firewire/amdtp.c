@@ -49,6 +49,7 @@ int amdtp_stream_init(struct amdtp_stream *s, struct fw_unit *unit,
 	s->packet_index = 0;
 
 	s->data_block_state = 0;
+	s->use_digimagic = false;
 
 	return 0;
 }
@@ -281,7 +282,9 @@ static void amdtp_write_samples(struct amdtp_stream *s,
 		for (c = 0; c < channels; ++c) {
 			buffer[s->pcm_quadlets[c]] =
 					cpu_to_be32((*src >> 8) | 0x40000000);
-			digi_encode_step(&digistate, &buffer[s->pcm_quadlets[c]]);
+			if (s->use_digimagic) {
+				digi_encode_step(&digistate, &buffer[s->pcm_quadlets[c]]);
+			}
 			src++;
 		}
 		buffer += frame_step;

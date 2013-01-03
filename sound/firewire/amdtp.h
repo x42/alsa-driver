@@ -81,6 +81,7 @@ struct amdtp_stream {
 
 	unsigned int pcm_buffer_pointer;
 	unsigned int pcm_period_pointer;
+	bool use_digimagic;
 };
 
 int amdtp_stream_init(struct amdtp_stream *s, struct fw_unit *unit,
