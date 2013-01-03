@@ -19,8 +19,7 @@
 #define CYCLES_PER_SECOND	8000
 #define TICKS_PER_SECOND	(TICKS_PER_CYCLE * CYCLES_PER_SECOND)
 
-//#define TRANSFER_DELAY_TICKS	0x2e00 /* 479.17 µs */
-#define TRANSFER_DELAY_TICKS	0x2e00 //might need tweaking?
+#define TRANSFER_DELAY_TICKS	0x2e00 /* 479.17 µs */
 
 #define TAG_CIP			1
 
@@ -30,8 +29,13 @@
 #define AMDTP_FDF_SFC_SHIFT	16
 
 /* TODO: make these configurable */
-#define INTERRUPT_INTERVAL	24	
+#if 0 // dz
+#define INTERRUPT_INTERVAL	24
 #define QUEUE_LENGTH		96
+#else
+#define INTERRUPT_INTERVAL	16
+#define QUEUE_LENGTH		48
+#endif
 
 /**
  * amdtp_stream_init - initialize an AMDTP stream structure
@@ -131,7 +135,7 @@ sfc_found:
 
 	if (!s->dual_wire)
 		for (i = 0; i < pcm_channels; ++i)
-			s->pcm_quadlets[i] = i;//DZ
+			s->pcm_quadlets[i] = i;
 	else
 		for (i = 0; i < pcm_channels / 2; ++i) {
 			s->pcm_quadlets[i                   ] = 2 * i;
@@ -166,31 +170,33 @@ EXPORT_SYMBOL(amdtp_stream_get_max_payload);
 static unsigned int calculate_data_blocks(struct amdtp_stream *s)
 {
 	unsigned int phase, data_blocks;
-//	unsigned int pattern003_96[6] = { 2, 6, 3, 5, 3, 5 };
 
 	if (!cip_sfc_is_base_44100(s->sfc)) {
 		/* Sample_rate / 8000 is an integer, and precomputed. */
-		//non 003: 
-		//data_blocks = s->data_block_state;
-		
-/*		if (s->sfc == CIP_SFC_96000) {
-			phase = s->data_block_state;
-			data_blocks = (11 + (phase % 2) * 3) * pattern003_96[phase];
-			if (++phase >= 6)
-				phase = 0;
-			s->data_block_state = phase;
+		if (!s->use_digimagic) {
+			data_blocks = s->data_block_state;
+		} else {
+			if (s->sfc == CIP_SFC_96000) {
+#if 0 // TODO
+				phase = s->data_block_state;
+				data_blocks = (11 + (phase % 2) * 3) * pattern003_96[phase];
+				if (++phase >= 6)
+					phase = 0;
+				s->data_block_state = phase;
+#else
+			data_blocks = s->data_block_state;
+#endif
+			} else {  //48000Hz 003
+				phase = s->data_block_state;
+				if (phase >= 16)
+					phase = 0;
 
-		} else {  //48000Hz 003 
-*/			phase = s->data_block_state;
-			if (phase >= 16)
-				phase = 0;
-
-			data_blocks = ((phase % 16) > 7) ? 5 : 7;
-			if (++phase >= 16)
-				phase = 0;
-			s->data_block_state = phase;
-//		}
-//		data_blocks = s->data_block_state;
+				data_blocks = ((phase % 16) > 7) ? 5 : 7;
+				if (++phase >= 16)
+					phase = 0;
+				s->data_block_state = phase;
+			}
+		}
 
 	} else {
 		phase = s->data_block_state;
@@ -430,17 +436,16 @@ static void queue_out_packet(struct amdtp_stream *s, unsigned int cycle)
 	}
 
 	buffer = s->buffer.packets[index].buffer;
-	buffer[0] = cpu_to_be32(0x00 << 24 /*ACCESS_ONCE(s->source_node_id_field)*/| 
+	buffer[0] = cpu_to_be32( ((s->use_digimagic)? 0x00 : ACCESS_ONCE(s->source_node_id_field) ) | 
 				(s->data_block_quadlets << 16) |
 				s->data_block_counter);
 	buffer[1] = cpu_to_be32(CIP_EOH | CIP_FMT_AM | AMDTP_FDF_AM824 |
-				(s->sfc << AMDTP_FDF_SFC_SHIFT) ); //dzhack2 | syt);
+				(s->sfc << AMDTP_FDF_SFC_SHIFT) | ((s->use_digimagic)? 0x00 : syt) );
 	buffer += 2;
 
 	pcm = ACCESS_ONCE(s->pcm);
-	if (pcm) {
+	if (pcm)
 		amdtp_write_samples(s, pcm, buffer, data_blocks);
-	}
 	else
 		amdtp_fill_pcm_silence(s, buffer, data_blocks);
 	if (s->midi_data_channels > 0)
@@ -501,7 +506,9 @@ static void out_packet_callback(struct fw_iso_context *context, u32 cycle,
 	for (i = 0; i < packets; ++i)
 		queue_out_packet(s, ++cycle);
 	fw_iso_context_queue_flush(s->context);
-	s->cycle = cycle;
+	if (s->use_digimagic) {
+		s->cycle = cycle;
+	}
 }
 
 static int queue_initial_skip_packets(struct amdtp_stream *s)
@@ -574,7 +581,11 @@ int amdtp_stream_start(struct amdtp_stream *s, int channel, int speed)
 		goto err_unlock;
 	}
 
-	s->data_block_state = 0; //initial_state[s->sfc].data_block;
+	if (s->use_digimagic) {
+		s->data_block_state = 0;
+	} else {
+		s->data_block_state = initial_state[s->sfc].data_block;
+	}
 	s->syt_offset_state = initial_state[s->sfc].syt_offset;
 	s->last_syt_offset = TICKS_PER_CYCLE;
 
@@ -600,16 +611,15 @@ int amdtp_stream_start(struct amdtp_stream *s, int channel, int speed)
 
 	s->packet_index = 0;
 	s->data_block_counter = 0;
-//	s->data_block_counter = -38;
-//	err = queue_initial_skip_packets(s);
-//	if (err < 0)
-//		goto err_context;
-
-	s->cycle = 0;
-	err = queue_initial_dummy_packets(s);
+	if (!s->use_digimagic) {
+		err = queue_initial_skip_packets(s);
+	} else {
+		s->cycle = 0;
+		err = queue_initial_dummy_packets(s);
+	}
 	if (err < 0)
 		goto err_context;
-	
+
 	err = fw_iso_context_start(s->context, -1, 0, 0);
 	if (err < 0)
 		goto err_context;
