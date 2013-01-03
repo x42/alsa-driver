@@ -53,11 +53,10 @@ static const __u8 digiscrt(const __u8 idx, const unsigned int off) {
 #endif
 
 	const __u8 ln = idx & 0xf;
-	if (len[ln] < off) return 0x00;
-
 	const __u8 hn = (idx >> 4) & 0xf;
 	const __u8 hr = (hn == 0x9) ? 0x9 : hir[ (hio[hn] + off) % 15 ];
 
+	if (len[ln] < off) return 0x00;
 	return ( (nib[14 + off - len[ln]]) | (hr << 4) );
 }
 
