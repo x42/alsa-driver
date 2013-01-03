@@ -369,7 +369,7 @@ static int scs_init_hss_address(struct scs *scs)
 	data = cpu_to_be64(((u64)HSS1394_TAG_CHANGE_ADDRESS << 56) |
 			   scs->hss_handler.offset);
 	err = snd_fw_transaction(scs->unit, TCODE_WRITE_BLOCK_REQUEST,
-				 HSS1394_ADDRESS, &data, 8);
+				 HSS1394_ADDRESS, &data, 8, 0);
 	if (err < 0)
 		dev_err(&scs->unit->device, "HSS1394 communication failed\n");
 
@@ -477,7 +477,7 @@ static void scs_update(struct fw_unit *unit)
 	data = cpu_to_be64(((u64)HSS1394_TAG_CHANGE_ADDRESS << 56) |
 			   scs->hss_handler.offset);
 	snd_fw_transaction(scs->unit, TCODE_WRITE_BLOCK_REQUEST,
-			   HSS1394_ADDRESS, &data, 8);
+			   HSS1394_ADDRESS, &data, 8, 0);
 }
 
 static const struct ieee1394_device_id scs_id_table[] = {
