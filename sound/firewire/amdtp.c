@@ -279,7 +279,7 @@ static void amdtp_write_samples(struct amdtp_stream *s,
 	channels = s->pcm_channels;
 	src = (void *)runtime->dma_area +
 			s->pcm_buffer_pointer * (runtime->frame_bits / 8);
-	
+
 	remaining_frames = runtime->buffer_size - s->pcm_buffer_pointer;
 	frame_step = s->data_block_quadlets;
 
@@ -324,15 +324,15 @@ static void amdtp_fill_midi(struct amdtp_stream *s,
 }
 
 static void amdtp_fill_midi_as_pcm(struct amdtp_stream *s,
-                            __be32 *buffer, unsigned int frames)
+				   __be32 *buffer, unsigned int frames)
 {
-        unsigned int i, c;
+	unsigned int i, c;
 
-        for (i = 0; i < frames; ++i) {
-                for (c = 0; c < s->midi_data_channels; ++c)
-                        buffer[s->midi_quadlets[c]] = cpu_to_be32(0x40000000);
-                buffer += s->data_block_quadlets;
-        }
+	for (i = 0; i < frames; ++i) {
+		for (c = 0; c < s->midi_data_channels; ++c)
+			buffer[s->midi_quadlets[c]] = cpu_to_be32(0x40000000);
+		buffer += s->data_block_quadlets;
+	}
 }
 
 static void queue_out_dummy_packet(struct amdtp_stream *s, unsigned int cycle)
@@ -360,7 +360,7 @@ static void queue_out_dummy_packet(struct amdtp_stream *s, unsigned int cycle)
 	}
 
 	buffer = s->buffer.packets[index].buffer;
-	buffer[0] = cpu_to_be32(0x00 << 24 /*ACCESS_ONCE(s->source_node_id_field)*/| 
+	buffer[0] = cpu_to_be32(0x00 << 24 /*ACCESS_ONCE(s->source_node_id_field)*/|
 				(s->data_block_quadlets << 16) |
 				s->data_block_counter); //dzhack
 	buffer[1] = cpu_to_be32(CIP_EOH | CIP_FMT_AM | AMDTP_FDF_AM824 |
@@ -436,7 +436,7 @@ static void queue_out_packet(struct amdtp_stream *s, unsigned int cycle)
 	}
 
 	buffer = s->buffer.packets[index].buffer;
-	buffer[0] = cpu_to_be32( ((s->use_digimagic)? 0x00 : ACCESS_ONCE(s->source_node_id_field) ) | 
+	buffer[0] = cpu_to_be32( ((s->use_digimagic)? 0x00 : ACCESS_ONCE(s->source_node_id_field) ) |
 				(s->data_block_quadlets << 16) |
 				s->data_block_counter);
 	buffer[1] = cpu_to_be32(CIP_EOH | CIP_FMT_AM | AMDTP_FDF_AM824 |
@@ -532,15 +532,15 @@ static int queue_initial_skip_packets(struct amdtp_stream *s)
 	return 0;
 }
 
-static int queue_initial_dummy_packets(struct amdtp_stream *s) 
+static int queue_initial_dummy_packets(struct amdtp_stream *s)
 {
-        unsigned int i;
-	
+	unsigned int i;
+
 	unsigned int packets = 96;
 
-        for (i = 0; i < packets; ++i)
+	for (i = 0; i < packets; ++i)
 	{
-                queue_out_dummy_packet(s, s->cycle);
+		queue_out_dummy_packet(s, s->cycle);
 		s->cycle += 1;
 	}
 	fw_iso_context_queue_flush(s->context);
