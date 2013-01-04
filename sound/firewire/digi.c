@@ -1,7 +1,9 @@
 /*
- * TC Applied Technologies Digital Interface Communications Engine driver
+ * Digidesign 003Rack driver
  *
  * Copyright (c) Clemens Ladisch <clemens@ladisch.de>
+ * Copyright (C) 2012 Robin Gareus <robin@gareus.org>
+ * Copyright (C) 2012 Damien Zammit <damien@zamaudio.com>
  * Licensed under the terms of the GNU General Public License, version 2.
  */
 
@@ -38,12 +40,6 @@
 #define MAX_RX	4
 //4
 
-/*
- * Digidesign 003Rack driver
- *
- * Copyright (c) Damien Zammit <damien.zammit@gmail.com>
- * Licensed under the terms of the GNU General Public License, version 2.
- */
 #define R003_HARDWARE_ADDR      0xffff00000000ULL
 
 #define VENDOR_DIGIDESIGN       0x00a07e
@@ -148,7 +144,7 @@ struct digi {
 };
 
 MODULE_DESCRIPTION("DIGIDESIGN 003RACK driver");
-MODULE_AUTHOR("Damien Zammit <damien.zammit@gmail.com>");
+MODULE_AUTHOR("Damien Zammit <damien@zamaudio.com>");
 MODULE_LICENSE("GPL v2");
 
 static inline u64 global_address(struct digi *digi, unsigned int offset)
